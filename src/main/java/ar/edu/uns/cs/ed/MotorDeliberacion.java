@@ -1,7 +1,16 @@
 package ar.edu.uns.cs.ed;
 
-import main.java.ar.edu.uns.cs.ed.tdas.excepciones.InvalidPositionException;
-import main.java.ar.edu.uns.cs.ed.tdas.tdalista.PositionList;
+import ar.edu.uns.cs.ed.tdas.Entry;
+import ar.edu.uns.cs.ed.tdas.Position;
+import ar.edu.uns.cs.ed.tdas.excepciones.EmptyStackException;
+import ar.edu.uns.cs.ed.tdas.excepciones.InvalidPositionException;
+import ar.edu.uns.cs.ed.tdas.tdaarbol.Arbol;
+import ar.edu.uns.cs.ed.tdas.tdaarbol.Tree;
+import ar.edu.uns.cs.ed.tdas.tdadiccionario.DiccionarioHashAbierto;
+import ar.edu.uns.cs.ed.tdas.tdalista.ListaDoblementeEnlazada;
+import ar.edu.uns.cs.ed.tdas.tdalista.PositionList;
+import ar.edu.uns.cs.ed.tdas.tdapila.PilaConLista;
+import ar.edu.uns.cs.ed.tdas.tdapila.Stack;
 
 /**
  * Incluir los import necesarios para las clases utilizadas en el código.
@@ -16,6 +25,20 @@ public class MotorDeliberacion {
     /**
      * Incluir los atributos necesarios para el desarrollo.
      */
+    // Árbol general
+    private Tree<Opinion> arbol;
+
+    // Diccionario para indexar cada nodo por su ID y permitir búsquedas/inserciones directas en O(1).
+    private DiccionarioHashAbierto<String, Position<Opinion>> mapaNodos;
+
+    // Diccionario para indexar las opiniones de cada usuario por su ID y permitir consultas en O(1).
+    private DiccionarioHashAbierto<String, PositionList<Opinion>> mapaUsuarios;
+
+    // Pila para registrar el historial de operaciones reversibles
+    private Stack<Operaciones> pilaOperaciones;
+
+    // Bandera para registrar si la última operación realizada fue una eliminación (la cual no se puede deshacer).
+    private boolean ultimaOperacionFueEliminacion;
 
     /**
      * Constructor de la clase MotorDeliveracion.
@@ -23,7 +46,12 @@ public class MotorDeliberacion {
      * 
      */
     public MotorDeliberacion() {
-    //TODO: Inicializar el árbol de debate y las estructuras correspondientes. 
+        //TODO: Inicializar el árbol de debate y las estructuras correspondientes. 
+        this.arbol = new Arbol<Opinion>();
+        this.mapaNodos = new DiccionarioHashAbierto<String, Position<Opinion>>();
+        this.mapaUsuarios = new DiccionarioHashAbierto<String, PositionList<Opinion>>();
+        this.pilaOperaciones = new PilaConLista<Operaciones>();
+        this.ultimaOperacionFueEliminacion = false;
     }
 
     /**
@@ -40,6 +68,16 @@ public class MotorDeliberacion {
      */
     public void registrarOperacion(int operacion, String detalle, String idArgumento) {
         //TODO: Implementar el registro de la operación en la estructura correspondiente.
+        if (operacion != 1 && operacion != 2) {
+            throw new IllegalArgumentException("Código de operación inválido: " + operacion);
+        }
+        if (detalle == null || detalle.trim().isEmpty()) {
+            throw new IllegalArgumentException("El detalle de la operación no puede ser nulo ni vacío.");
+        }
+        if (idArgumento == null || idArgumento.trim().isEmpty()) {
+            throw new IllegalArgumentException("El identificador del argumento no puede ser nulo ni vacío.");
+        }
+        pilaOperaciones.push(new Operaciones(operacion, detalle.trim(), idArgumento.trim()));
     }
 
 /**
@@ -50,6 +88,59 @@ public class MotorDeliberacion {
  */
     public String deshacerUltimaOperacion() throws EmptyStackException {
         //TODO: Implementar la funcionalidad de deshacer la última operación registrada.
+        if (pilaOperaciones.isEmpty()) {
+            throw new EmptyStackException("No hay operaciones registradas para deshacer.");
+        }
+
+        Operaciones op = pilaOperaciones.top();
+        String tipoOp = (op.getOperacion() == 1) ? "CREAR_DEBATE" : "POSTEAR";
+
+        if (ultimaOperacionFueEliminacion) {
+            throw new IllegalStateException("No se pudo deshacer la operación " + tipoOp + ": no es posible deshacer tras una eliminación.");
+        }
+
+        pilaOperaciones.pop();
+
+        if (op.getOperacion() == 1) {
+            this.arbol = new Arbol<Opinion>();
+            this.mapaNodos = new DiccionarioHashAbierto<String, Position<Opinion>>();
+            this.mapaUsuarios = new DiccionarioHashAbierto<String, PositionList<Opinion>>();
+            return op.getDetalle();
+        } else if (op.getOperacion() == 2) {
+            String idPosteo = op.getId();
+            Entry<String, Position<Opinion>> entryNodo = mapaNodos.find(idPosteo);
+            if (entryNodo != null) {
+                Position<Opinion> posNodo = entryNodo.getValue();
+                Opinion opinion = posNodo.element();
+
+                try {
+                    arbol.removeNode(posNodo);
+                } catch (InvalidPositionException e) {
+                    throw new IllegalStateException("No se pudo deshacer la operación POSTEAR: error al remover del árbol.");
+                }
+
+                mapaNodos.remove(entryNodo);
+
+                String idUsr = opinion.getUsuario().getId();
+                Entry<String, PositionList<Opinion>> entryUsr = mapaUsuarios.find(idUsr);
+                if (entryUsr != null) {
+                    PositionList<Opinion> listaUsr = entryUsr.getValue();
+                    try {
+                        for (Position<Opinion> p : listaUsr.positions()) {
+                            if (p.element().getIdArgumento().equals(idPosteo)) {
+                                listaUsr.remove(p);
+                                break;
+                            }
+                        }
+                    } catch (InvalidPositionException e) {
+                        // Posición ya no válida
+                    }
+                }
+            }
+            return op.getDetalle();
+        }
+
+        return op.getDetalle();
     }
 /**
  * Crea un nuevo debate con un argumento raíz.
@@ -66,11 +157,106 @@ public class MotorDeliberacion {
  * Crea un usuario y un tema raíz, y los agrega al árbol y a las estructuras correspondientes.
  */
     public void crearDebate(String idRaiz, String texto, String idUsuario, String nombreUsuario) {
-    //TODO: Implementar la creación del debate con el argumento raíz y el usuario correspondiente.
+        //TODO: Implementar la creación del debate con el argumento raíz y el usuario correspondiente.
+        if (idRaiz == null || idRaiz.trim().isEmpty()) {
+            throw new IllegalArgumentException("El identificador de la raíz no puede ser nulo ni vacío.");
+        }
+        if (texto == null || texto.trim().isEmpty()) {
+            throw new IllegalArgumentException("El texto del debate no puede ser nulo ni vacío.");
+        }
+        if (idUsuario == null || idUsuario.trim().isEmpty()) {
+            throw new IllegalArgumentException("El identificador del usuario no puede ser nulo ni vacío.");
+        }
+        if (nombreUsuario == null || nombreUsuario.trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre del usuario no puede ser nulo ni vacío.");
+        }
+        if (arbol != null && !arbol.isEmpty()) {
+            throw new IllegalStateException("Ya existe un debate en curso.");
+        }
+
+        Usuario usuario = new Usuario(idUsuario.trim(), nombreUsuario.trim());
+        Opinion opinionRaiz = new Opinion(idRaiz.trim(), texto.trim(), "ROOT", usuario);
+
+        arbol.createRoot(opinionRaiz);
+        Position<Opinion> posRaiz = arbol.root();
+
+        mapaNodos.insert(idRaiz.trim(), posRaiz);
+
+        Entry<String, PositionList<Opinion>> entryUsr = mapaUsuarios.find(idUsuario.trim());
+        PositionList<Opinion> listaUsuario;
+        if (entryUsr == null) {
+            listaUsuario = new ListaDoblementeEnlazada<Opinion>();
+            mapaUsuarios.insert(idUsuario.trim(), listaUsuario);
+        } else {
+            listaUsuario = entryUsr.getValue();
+        }
+        listaUsuario.addLast(opinionRaiz);
+
+        ultimaOperacionFueEliminacion = false;
+        registrarOperacion(1, "CREAR_DEBATE:" + idRaiz.trim(), idRaiz.trim());
     }
 
     public void Postear(Usuario usr, String idNuevo, String idPadre, String postura, String texto) {
         //TODO: Implementar la funcionalidad de postear un nuevo argumento en el debate.
+        if (arbol == null || arbol.isEmpty()) {
+            throw new IllegalStateException("No hay un debate activo.");
+        }
+        if (usr == null || usr.getId() == null || usr.getId().trim().isEmpty()) {
+            throw new IllegalArgumentException("El usuario es inválido.");
+        }
+        if (idNuevo == null || idNuevo.trim().isEmpty()) {
+            throw new IllegalArgumentException("El identificador del posteo no puede ser nulo ni vacío.");
+        }
+        if (idPadre == null || idPadre.trim().isEmpty()) {
+            throw new IllegalArgumentException("El identificador del padre no puede ser nulo ni vacío.");
+        }
+        if (texto == null || texto.trim().isEmpty()) {
+            throw new IllegalArgumentException("El texto del posteo no puede ser nulo ni vacío.");
+        }
+        if (postura == null || postura.trim().isEmpty()) {
+            throw new IllegalArgumentException("La postura no puede ser nula ni vacía.");
+        }
+
+        String posturaNorm = postura.trim().toUpperCase().replace(" ", "");
+        if (!posturaNorm.equals("AFAVOR") && !posturaNorm.equals("ENCONTRA")) {
+            throw new IllegalArgumentException("Postura inválida: debe ser AFAVOR o ENCONTRA.");
+        }
+
+        String idNuevoTrim = idNuevo.trim();
+        String idPadreTrim = idPadre.trim();
+
+        if (mapaNodos.find(idNuevoTrim) != null) {
+            throw new IllegalArgumentException("Ya existe una opinión con el id: " + idNuevoTrim);
+        }
+
+        Entry<String, Position<Opinion>> entryPadre = mapaNodos.find(idPadreTrim);
+        if (entryPadre == null) {
+            throw new IllegalArgumentException("El nodo padre no existe: " + idPadreTrim);
+        }
+
+        Position<Opinion> posPadre = entryPadre.getValue();
+        Opinion nuevaOpinion = new Opinion(idNuevoTrim, texto.trim(), posturaNorm, usr);
+
+        try {
+            Position<Opinion> posHijo = arbol.addLastChild(posPadre, nuevaOpinion);
+            mapaNodos.insert(idNuevoTrim, posHijo);
+
+            String idUsrTrim = usr.getId().trim();
+            Entry<String, PositionList<Opinion>> entryUsr = mapaUsuarios.find(idUsrTrim);
+            PositionList<Opinion> listaUsuario;
+            if (entryUsr == null) {
+                listaUsuario = new ListaDoblementeEnlazada<Opinion>();
+                mapaUsuarios.insert(idUsrTrim, listaUsuario);
+            } else {
+                listaUsuario = entryUsr.getValue();
+            }
+            listaUsuario.addLast(nuevaOpinion);
+
+            ultimaOperacionFueEliminacion = false;
+            registrarOperacion(2, "POSTEAR:" + idNuevoTrim, idNuevoTrim);
+        } catch (InvalidPositionException e) {
+            throw new IllegalArgumentException("Posición del padre inválida: " + e.getMessage());
+        }
     }
     
 
@@ -86,12 +272,25 @@ public class MotorDeliberacion {
 
     //limpia todo el debate, dejando la estructura vacía.   
     public void clearDebate() {
-    //TODO: Implementar la funcionalidad de limpiar todo el debate, dejando la estructura vacía.
+        //TODO: Implementar la funcionalidad de limpiar todo el debate, dejando la estructura vacía.
+        this.arbol = new Arbol<Opinion>();
+        this.mapaNodos = new DiccionarioHashAbierto<String, Position<Opinion>>();
+        this.mapaUsuarios = new DiccionarioHashAbierto<String, PositionList<Opinion>>();
+        this.pilaOperaciones = new PilaConLista<Operaciones>();
+        this.ultimaOperacionFueEliminacion = false;
     }
 
     //consultar por usuario, devuelve una lista de argumentos que pertenecen a ese usuario.
     public PositionList<Opinion> consultarArgumentosPorUsuario(String idUsuario) {
-    //TODO: Implementar la funcionalidad de consultar los argumentos de un usuario específico en el debate.
+        //TODO: Implementar la funcionalidad de consultar los argumentos de un usuario específico en el debate.
+        if (idUsuario == null || idUsuario.trim().isEmpty()) {
+            throw new IllegalArgumentException("El identificador de usuario no puede ser nulo ni vacío.");
+        }
+        Entry<String, PositionList<Opinion>> entry = mapaUsuarios.find(idUsuario.trim());
+        if (entry != null && entry.getValue() != null) {
+            return entry.getValue();
+        }
+        return new ListaDoblementeEnlazada<Opinion>();
     }
 
     /**
@@ -103,6 +302,7 @@ public class MotorDeliberacion {
      */
     public DiccionarioHashAbierto<String,DiccionarioHashAbierto<String,Integer>> calcularPolarizacionDebate(){
         //TODO
+        return null;
     }
 
      /**
@@ -114,7 +314,7 @@ public class MotorDeliberacion {
     */
     public DiccionarioHashAbierto<String,Integer> calcularPolarizacionNodo(String idNodo){
         //TODO
-
+        return null;
     }
  /*** Mostrar árbol por consola ***/
  
@@ -171,5 +371,3 @@ public class MotorDeliberacion {
                 + "usuario=" + a.getUsuario().getId() + " -> " + a.getTexto();
     }
 }
-
-
