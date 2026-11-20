@@ -38,6 +38,9 @@ public class MotorDeliberacion {
     // Pila para registrar el historial de operaciones reversibles
     private Stack<Operaciones> pilaOperaciones;
 
+    // Historial de las operaciones realizadas en el debate actual (incluye eliminaciones y deshacer), para mostrar por consola.
+    private PositionList<String> historial;
+
     // Bandera para registrar si la última operación realizada fue una eliminación
     // (la cual no se puede deshacer).
     private boolean ultimaOperacionFueEliminacion;
@@ -53,6 +56,7 @@ public class MotorDeliberacion {
         this.diccUsuarios = new DiccionarioHashAbierto<String, PositionList<Opinion>>();
         this.diccPosUsuarios = new DiccionarioHashAbierto<String, Position<Opinion>>();
         this.pilaOperaciones = new PilaConLista<Operaciones>();
+        this.historial = new ListaDoblementeEnlazada<String>();
         this.ultimaOperacionFueEliminacion = false;
 
     }
@@ -110,6 +114,8 @@ public class MotorDeliberacion {
         }
 
         pilaOperaciones.pop();
+        historial.addLast("DESHACER -> " + op.getDetalle());
+
 
         if (op.getOperacion() == 1) {
             this.arbol = new Arbol<Opinion>();
@@ -144,12 +150,14 @@ public class MotorDeliberacion {
                     }
 
                     diccPosUsuarios.remove(entradaPosU);
-                }
+                    }
             }
             return op.getDetalle();
         }
 
         return op.getDetalle();
+
+        
     }
 
     /**
@@ -188,6 +196,8 @@ public class MotorDeliberacion {
             throw new IllegalStateException("Ya existe un debate en curso.");
         }
 
+        this.historial = new ListaDoblementeEnlazada<String>();
+
         Usuario usuario = new Usuario(idUsuario.trim(), nombreUsuario.trim());
         Opinion opinionRaiz = new Opinion(idRaiz.trim(), texto.trim(), "ROOT", usuario);
 
@@ -207,6 +217,9 @@ public class MotorDeliberacion {
         listaUsuario.addLast(opinionRaiz);
         ultimaOperacionFueEliminacion = false;
         registrarOperacion(1, "CREAR_DEBATE:" + idRaiz.trim(), idRaiz.trim());
+
+        historial.addLast("CREAR_DEBATE:" + idRaiz.trim());
+
     }
 
     public void Postear(Usuario usr, String idNuevo, String idPadre, String postura, String texto) {
@@ -267,9 +280,13 @@ public class MotorDeliberacion {
 
             ultimaOperacionFueEliminacion = false;
             registrarOperacion(2, "POSTEAR:" + idNuevoTrim, idNuevoTrim);
+
+            historial.addLast("POSTEAR:" + idNuevoTrim + " (usuario=" + idUsrTrim + ", padre=" + idPadreTrim + ")");
         } catch (InvalidPositionException e) {
             throw new IllegalArgumentException("Posición del padre inválida: " + e.getMessage());
         }
+
+        
     }
 
     /**
@@ -313,6 +330,7 @@ public class MotorDeliberacion {
             }
         if (arbol.isRoot(nodo)) {
             clearDebate();
+            historial.addLast("ELIMINAR_POSTEO:" + idPosteo.trim() + " (raíz, debate reiniciado)");
             ultimaOperacionFueEliminacion = true;
             return;
         }
@@ -343,6 +361,7 @@ public class MotorDeliberacion {
 
         }
 
+        historial.addLast("ELIMINAR_POSTEO:" + idPosteo.trim() + " (" + ids.size() + " nodos eliminados)");
         ultimaOperacionFueEliminacion = true;
     }
 
@@ -366,6 +385,7 @@ public class MotorDeliberacion {
         this.diccUsuarios = new DiccionarioHashAbierto<String, PositionList<Opinion>>();
         this.diccPosUsuarios = new DiccionarioHashAbierto<String, Position<Opinion>>();
         this.pilaOperaciones = new PilaConLista<Operaciones>();
+        this.historial = new ListaDoblementeEnlazada<String>();
         this.ultimaOperacionFueEliminacion = false;
     }
 
@@ -434,6 +454,25 @@ public class MotorDeliberacion {
             imprimirHijos(raiz, "");
         } catch (Exception e) {
             System.out.println("No se pudo imprimir el árbol: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Muestra por consola el historial de operaciones realizadas en el debate actual,
+     * en orden cronológico y numeradas.
+     * Incluye creación del debate, posteos, eliminaciones y operaciones deshechas.
+     * El historial se reinicia al crear un debate nuevo o al limpiar el debate.
+     */
+    public void mostrarOperaciones() {
+        if (historial == null || historial.isEmpty()) {
+            System.out.println("(No hay operaciones registradas.)");
+            return;
+        }
+
+        int numero = 1;
+        for (String operacion : historial) {
+            System.out.println(numero + ". " + operacion);
+            numero++;
         }
     }
 
