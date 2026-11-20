@@ -1,5 +1,7 @@
 package ar.edu.uns.cs.ed;
 
+import javax.swing.text.html.Option;
+
 import ar.edu.uns.cs.ed.tdas.Entry;
 import ar.edu.uns.cs.ed.tdas.Position;
 import ar.edu.uns.cs.ed.tdas.excepciones.EmptyStackException;
@@ -262,13 +264,70 @@ public class MotorDeliberacion {
 
     // Elimina un posteo y todo el subárbol.
     public void eliminarPosteo(String idUsuario, String idPosteo) {
-    //TODO: Implementar la funcionalidad de eliminar un posteo y todo su subárbol en el debate.
+
+        if (idUsuario == null || idUsuario.trim().isEmpty()) throw new IllegalArgumentException("Usuario nulo o vacio.");
+        if (idPosteo == null || idPosteo.trim().isEmpty()) throw new IllegalArgumentException("id nulo o vacio.");
+        if(arbol == null || arbol.isEmpty()) throw new IllegalStateException("No hay un debate activo.");
+
+        Entry<String, Position<Opinion>> entrada = mapaNodos.find(idPosteo.trim());
+        if (entrada == null) throw new IllegalArgumentException("El posteo no existe.");
+        
+        Position<Opinion> nodo = entrada.getValue();
+        String autor = nodo.element().getUsuario().getId();
+
+        if(!(idUsuario.trim().equals(autor))) throw new IllegalStateException("El usuario no es autor del posteo.");
+
+        if(arbol.isRoot(nodo)) {
+            clearDebate();
+            ultimaOperacionFueEliminacion = true;
+            return;
+        }
+
+        PositionList<String> ids = new ListaDoblementeEnlazada<String>();
+        PositionList<Position<Opinion>> posiciones = new ListaDoblementeEnlazada<Position<Opinion>>();
+        obtenerIdsYPosicionesSubarbol(nodo, ids, posiciones);
+
+        for(Position<Opinion> pos : posiciones) {
+            Opinion op = pos.element();
+            arbol.removeExternalNode(pos);
+            
+            Entry<String, Position<Opinion>> entradaPos = mapaNodos.find(op.getIdArgumento());
+            mapaNodos.remove(entradaPos); 
+
+            Entry<String, PositionList<Opinion>> entradaU = mapaUsuarios.find(op.getUsuario().getId());
+            if(entradaU != null) {
+                PositionList<Opinion> listaUsuarios = entradaU.getValue();
+                for(Position<Opinion> p : listaUsuarios.positions()) {
+                    if(p.element().getIdArgumento().equals(op.getIdArgumento())) {
+                        listaUsuarios.remove(p);
+                        break;
+                    }
+                }
+            }
+        }
+
+        ultimaOperacionFueEliminacion = true;
     }
 
+
+
     //obtiene las posiciones en postorden.
-    private void obtenerIdsYPosicionesSubarbol(Position<Opinion> nodo, PositionList<String> ids, PositionList<Position<Opinion>> posiciones) {
     //TODO: Implementar la funcionalidad de obtener los ids y posiciones de un subárbol en postorden.
+    private void obtenerIdsYPosicionesSubarbol(Position<Opinion> nodo, PositionList<String> ids, PositionList<Position<Opinion>> posiciones) {
+
+        for(Position<Opinion> hijo : arbol.children(nodo)) {
+            obtenerIdsYPosicionesSubarbol(hijo, ids, posiciones);
+        }
+
+        String id = nodo.element().getIdArgumento();
+        ids.addLast(id);
+        posiciones.addLast(nodo);
     }
+
+
+
+
+
 
     //limpia todo el debate, dejando la estructura vacía.   
     public void clearDebate() {
