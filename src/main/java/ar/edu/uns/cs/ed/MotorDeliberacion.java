@@ -111,6 +111,7 @@ public class MotorDeliberacion {
             this.diccUsuarios = new DiccionarioHashAbierto<String, PositionList<Opinion>>();
             this.diccPosUsuarios = new DiccionarioHashAbierto<String, Position<Opinion>>();
             return op.getDetalle();
+
         } else if (op.getOperacion() == 2) {
             String idPosteo = op.getId();
             Entry<String, Position<Opinion>> entryNodo = diccNodos.find(idPosteo);
@@ -119,27 +120,22 @@ public class MotorDeliberacion {
                 Opinion opinion = posNodo.element();
 
                 try {
-                    arbol.removeNode(posNodo);
+                    arbol.removeExternalNode(posNodo);
                 } catch (InvalidPositionException e) {
                     throw new IllegalStateException("No se pudo deshacer la operación POSTEAR: error al remover del árbol.");
                 }
 
                 diccNodos.remove(entryNodo);
 
-                String idUsr = opinion.getUsuario().getId();
-                Entry<String, PositionList<Opinion>> entryUsr = diccUsuarios.find(idUsr);
-                if (entryUsr != null) {
-                    PositionList<Opinion> listaUsr = entryUsr.getValue();
-                    try {
-                        for (Position<Opinion> p : listaUsr.positions()) {
-                            if (p.element().getIdArgumento().equals(idPosteo)) {
-                                listaUsr.remove(p);
-                                break;
-                            }
-                        }
-                    } catch (InvalidPositionException e) {
-                        // Posición ya no válida
+                Entry<String, Position<Opinion>> entradaPosU = diccPosUsuarios.find(idPosteo);
+                if(entradaPosU != null) {
+                    Entry<String, PositionList<Opinion>> entradaUsuario = diccUsuarios.find(opinion.getUsuario().getId());
+
+                    if(entradaUsuario != null) {
+                        entradaUsuario.getValue().remove(entradaPosU.getValue());
                     }
+
+                    diccPosUsuarios.remove(entradaPosU);
                 }
             }
             return op.getDetalle();
