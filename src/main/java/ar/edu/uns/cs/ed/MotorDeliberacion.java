@@ -1,5 +1,6 @@
 package ar.edu.uns.cs.ed;
 
+/* Incluir los import necesarios para las clases utilizadas en el código. */
 import ar.edu.uns.cs.ed.tdas.Entry;
 import ar.edu.uns.cs.ed.tdas.Position;
 import ar.edu.uns.cs.ed.tdas.excepciones.EmptyStackException;
@@ -12,42 +13,38 @@ import ar.edu.uns.cs.ed.tdas.tdalista.PositionList;
 import ar.edu.uns.cs.ed.tdas.tdapila.PilaConLista;
 import ar.edu.uns.cs.ed.tdas.tdapila.Stack;
 
-/**
- * Incluir los import necesarios para las clases utilizadas en el código.
- */
-
-/**
- * Clase que representa el motor de deliveración.
- * 
- */
+/* Clase que representa el motor de deliveración. */
 public class MotorDeliberacion {
-
     /**
      * Incluir los atributos necesarios para el desarrollo.
      */
     // Árbol general
     private Tree<Opinion> arbol;
 
-    // Diccionario para indexar cada nodo por su ID y permitir búsquedas/inserciones directas en O(1).
+    // Diccionario para indexar cada nodo por su ID y permitir búsquedas/inserciones
+    // directas en O(1).
     private DiccionarioHashAbierto<String, Position<Opinion>> diccNodos;
 
-    // Diccionario para indexar las opiniones de cada usuario por su ID y permitir consultas en O(1).
+    // Diccionario para indexar las opiniones de cada usuario por su ID y permitir
+    // consultas en O(1).
     private DiccionarioHashAbierto<String, PositionList<Opinion>> diccUsuarios;
 
-
-    // Diccionario que guarda, para cada opinión (por su id), su posición dentro de la lista de su usuario.
-    // Permite sacarla de esa lista en O(1) al eliminar o deshacer, sin tener que recorrerla.
-    private DiccionarioHashAbierto<String,Position<Opinion>> diccPosUsuarios;
+    // Diccionario que guarda, para cada opinión (por su id), su posición dentro de
+    // la lista de su usuario.
+    // Permite sacarla de esa lista en O(1) al eliminar o deshacer, sin tener que
+    // recorrerla.
+    private DiccionarioHashAbierto<String, Position<Opinion>> diccPosUsuarios;
 
     // Pila para registrar el historial de operaciones reversibles
     private Stack<Operaciones> pilaOperaciones;
 
-    // Bandera para registrar si la última operación realizada fue una eliminación (la cual no se puede deshacer).
+    // Bandera para registrar si la última operación realizada fue una eliminación
+    // (la cual no se puede deshacer).
     private boolean ultimaOperacionFueEliminacion;
 
     /**
      * Constructor de la clase MotorDeliberacion.
-     * Inicializa el árbol de debate, y las estructuras correspondientes.  
+     * Inicializa el árbol de debate, y las estructuras correspondientes.
      * 
      */
     public MotorDeliberacion() {
@@ -62,14 +59,20 @@ public class MotorDeliberacion {
 
     /**
      * Registra una operación en la estructura que almacena las operaciones.
-     * Las siguientes operaciones se pueden deshacer: "CREAR_DEBATE", "POSTEAR". El resto de las operaciones no se pueden deshacer.
+     * Las siguientes operaciones se pueden deshacer: "CREAR_DEBATE", "POSTEAR". El
+     * resto de las operaciones no se pueden deshacer.
      * 
-     * La operación eliminar posteo no se puede deshacer, y si se intenta deshacer una operación cuando no hay operaciones registradas, se lanza una excepción.
+     * La operación eliminar posteo no se puede deshacer, y si se intenta deshacer
+     * una operación cuando no hay operaciones registradas, se lanza una excepción.
      * 
      * 
-     * @param operacion : La operación a registrar. 1: CREAR_DEBATE, 2: POSTEAR
-     * @param detalle : Detalle de la operación, como el id del argumento o el id del usuario. El texto de la operación se almacena en mayúsculas para mantener consistencia. Por ejemplo: "CREAR_DEBATE:" + idRaiz.trim()
-     * @param idArgumento : Identificador del argumento o de root en caso de ser el tema raíz.
+     * @param operacion   : La operación a registrar. 1: CREAR_DEBATE, 2: POSTEAR
+     * @param detalle     : Detalle de la operación, como el id del argumento o el
+     *                    id del usuario. El texto de la operación se almacena en
+     *                    mayúsculas para mantener consistencia. Por ejemplo:
+     *                    "CREAR_DEBATE:" + idRaiz.trim()
+     * @param idArgumento : Identificador del argumento o de root en caso de ser el
+     *                    tema raíz.
      * @throws IllegalArgumentException si la operación es nula o vacía.
      */
     public void registrarOperacion(int operacion, String detalle, String idArgumento) {
@@ -85,12 +88,14 @@ public class MotorDeliberacion {
         pilaOperaciones.push(new Operaciones(operacion, detalle.trim(), idArgumento.trim()));
     }
 
-/**
- * Deshace la última operación registrada en el motor de deliberación.
- * La operación eliminar posteo no se puede deshacer, y si se intenta deshacer una operación cuando no hay operaciones registradas, se lanza una excepción.
- * @return
- * @throws EmptyStackException
- */
+    /**
+     * Deshace la última operación registrada en el motor de deliberación.
+     * La operación eliminar posteo no se puede deshacer, y si se intenta deshacer
+     * una operación cuando no hay operaciones registradas, se lanza una excepción.
+     * 
+     * @return
+     * @throws EmptyStackException
+     */
     public String deshacerUltimaOperacion() throws EmptyStackException {
         if (pilaOperaciones.isEmpty()) {
             throw new EmptyStackException("No hay operaciones registradas para deshacer.");
@@ -100,7 +105,8 @@ public class MotorDeliberacion {
         String tipoOp = (op.getOperacion() == 1) ? "CREAR_DEBATE" : "POSTEAR";
 
         if (ultimaOperacionFueEliminacion) {
-            throw new IllegalStateException("No se pudo deshacer la operación " + tipoOp + ": no es posible deshacer tras una eliminación.");
+            throw new IllegalStateException(
+                    "No se pudo deshacer la operación " + tipoOp + ": no es posible deshacer tras una eliminación.");
         }
 
         pilaOperaciones.pop();
@@ -122,16 +128,18 @@ public class MotorDeliberacion {
                 try {
                     arbol.removeExternalNode(posNodo);
                 } catch (InvalidPositionException e) {
-                    throw new IllegalStateException("No se pudo deshacer la operación POSTEAR: error al remover del árbol.");
+                    throw new IllegalStateException(
+                            "No se pudo deshacer la operación POSTEAR: error al remover del árbol.");
                 }
 
                 diccNodos.remove(entryNodo);
 
                 Entry<String, Position<Opinion>> entradaPosU = diccPosUsuarios.find(idPosteo);
-                if(entradaPosU != null) {
-                    Entry<String, PositionList<Opinion>> entradaUsuario = diccUsuarios.find(opinion.getUsuario().getId());
+                if (entradaPosU != null) {
+                    Entry<String, PositionList<Opinion>> entradaUsuario = diccUsuarios
+                            .find(opinion.getUsuario().getId());
 
-                    if(entradaUsuario != null) {
+                    if (entradaUsuario != null) {
                         entradaUsuario.getValue().remove(entradaPosU.getValue());
                     }
 
@@ -143,20 +151,26 @@ public class MotorDeliberacion {
 
         return op.getDetalle();
     }
-/**
- * Crea un nuevo debate con un argumento raíz.
- * @param idRaiz   : Identificador único del tema raíz.
- * @param texto:    Texto del tema raíz.
- * @param idUsuario: Identificador del usuario.
- * @param nombreUsuario: Nombre del usuario.
- * 
- * El método valida que los parámetros no sean nulos o vacíos, y que el identificador de la raíz sea numérico.
- * Si el árbol ya tiene un debate, lanza una excepción.
- * El método registra la operación en la pila de operaciones para permitir deshacerla posteriormente.
- * @throws IllegalArgumentException si algún parámetro es inválido.
- * @throws IllegalStateException si ya existe un debate en curso.
- * Crea un usuario y un tema raíz, y los agrega al árbol y a las estructuras correspondientes.
- */
+
+    /**
+     * Crea un nuevo debate con un argumento raíz.
+     * 
+     * @param idRaiz         : Identificador único del tema raíz.
+     * @param texto:         Texto del tema raíz.
+     * @param idUsuario:     Identificador del usuario.
+     * @param nombreUsuario: Nombre del usuario.
+     * 
+     *                       El método valida que los parámetros no sean nulos o
+     *                       vacíos, y que el identificador de la raíz sea numérico.
+     *                       Si el árbol ya tiene un debate, lanza una excepción.
+     *                       El método registra la operación en la pila de
+     *                       operaciones para permitir deshacerla posteriormente.
+     * @throws IllegalArgumentException si algún parámetro es inválido.
+     * @throws IllegalStateException    si ya existe un debate en curso.
+     *                                  Crea un usuario y un tema raíz, y los agrega
+     *                                  al árbol y a las estructuras
+     *                                  correspondientes.
+     */
     public void crearDebate(String idRaiz, String texto, String idUsuario, String nombreUsuario) {
         if (idRaiz == null || idRaiz.trim().isEmpty()) {
             throw new IllegalArgumentException("El identificador de la raíz no puede ser nulo ni vacío.");
@@ -257,33 +271,47 @@ public class MotorDeliberacion {
             throw new IllegalArgumentException("Posición del padre inválida: " + e.getMessage());
         }
     }
-    
 
     /**
      * Elimina un posteo y todo su subárbol de respuestas (eliminación en cascada).
-     * Solo el autor del posteo puede eliminarlo. Si se elimina la raíz, se reinicia el debate.
-     * Los nodos se eliminan en postorden, de modo que cada uno es hoja al momento de removerlo.
+     * Solo el autor del posteo puede eliminarlo. Si se elimina la raíz, se reinicia
+     * el debate.
+     * Los nodos se eliminan en postorden, de modo que cada uno es hoja al momento
+     * de removerlo.
      * La operación no se puede deshacer.
      * Orden: O(m), siendo m la cantidad de nodos del subárbol eliminado.
+     * 
      * @param idUsuario : Identificador del usuario que solicita la eliminación.
      * @param idPosteo  : Identificador del posteo a eliminar.
-     * @throws IllegalArgumentException si algún id es nulo o vacío, o si el posteo no existe.
-     * @throws IllegalStateException si no hay debate activo o el usuario no es el autor del posteo.
+     * @throws IllegalArgumentException si algún id es nulo o vacío, o si el posteo
+     *                                  no existe.
+     * @throws IllegalStateException    si no hay debate activo o el usuario no es
+     *                                  el autor del posteo.
      */
     public void eliminarPosteo(String idUsuario, String idPosteo) {
 
-        if (idUsuario == null || idUsuario.trim().isEmpty()) throw new IllegalArgumentException("Usuario nulo o vacio.");
-        if (idPosteo == null || idPosteo.trim().isEmpty()) throw new IllegalArgumentException("id nulo o vacio.");
-        if(arbol == null || arbol.isEmpty()) throw new IllegalStateException("No hay un debate activo.");
+        if (idUsuario == null || idUsuario.trim().isEmpty()) {
+            throw new IllegalArgumentException("Usuario nulo o vacio.");
+        }
+        if (idPosteo == null || idPosteo.trim().isEmpty()) {
+            throw new IllegalArgumentException("id nulo o vacio.");
+        }
+        if (arbol == null || arbol.isEmpty()) {
+            throw new IllegalStateException("No hay un debate activo.");
+        }
 
         Entry<String, Position<Opinion>> entrada = diccNodos.find(idPosteo.trim());
-        if (entrada == null) throw new IllegalArgumentException("El posteo no existe: " + idPosteo.trim());
-        
+        if (entrada == null)
+            throw new IllegalArgumentException("El posteo no existe: " + idPosteo.trim());
+
         Position<Opinion> nodo = entrada.getValue();
         String autor = nodo.element().getUsuario().getId();
 
-        if(!(idUsuario.trim().equals(autor))) throw new IllegalStateException("El usuario " + idUsuario.trim() + " no es autor del posteo " + idPosteo.trim());
-        if(arbol.isRoot(nodo)) {
+        if (!(idUsuario.trim().equals(autor))){
+            throw new IllegalStateException(
+                    "El usuario " + idUsuario.trim() + " no es autor del posteo " + idPosteo.trim());
+            }
+        if (arbol.isRoot(nodo)) {
             clearDebate();
             ultimaOperacionFueEliminacion = true;
             return;
@@ -293,38 +321,36 @@ public class MotorDeliberacion {
         PositionList<Position<Opinion>> posiciones = new ListaDoblementeEnlazada<Position<Opinion>>();
         obtenerIdsYPosicionesSubarbol(nodo, ids, posiciones);
 
-        for(Position<Opinion> pos : posiciones) {
+        for (Position<Opinion> pos : posiciones) {
             Opinion op = pos.element();
             arbol.removeExternalNode(pos);
-            
+
             Entry<String, Position<Opinion>> entradaPos = diccNodos.find(op.getIdArgumento());
 
-            if(entradaPos != null) {
-                diccNodos.remove(entradaPos); 
+            if (entradaPos != null) {
+                diccNodos.remove(entradaPos);
             }
 
             Entry<String, Position<Opinion>> entradaPosU = diccPosUsuarios.find(op.getIdArgumento());
-            if(entradaPosU != null) {
+            if (entradaPosU != null) {
                 Entry<String, PositionList<Opinion>> entradaU = diccUsuarios.find(op.getUsuario().getId());
-                if(entradaU != null) {
+                if (entradaU != null) {
                     entradaU.getValue().remove(entradaPosU.getValue());
                 }
-                
+
                 diccPosUsuarios.remove(entradaPosU);
             }
-
 
         }
 
         ultimaOperacionFueEliminacion = true;
     }
 
+    // Obtiene las posiciones en postorden.
+    private void obtenerIdsYPosicionesSubarbol(Position<Opinion> nodo, PositionList<String> ids,
+            PositionList<Position<Opinion>> posiciones) {
 
-
-    //Obtiene las posiciones en postorden.
-    private void obtenerIdsYPosicionesSubarbol(Position<Opinion> nodo, PositionList<String> ids, PositionList<Position<Opinion>> posiciones) {
-
-        for(Position<Opinion> hijo : arbol.children(nodo)) {
+        for (Position<Opinion> hijo : arbol.children(nodo)) {
             obtenerIdsYPosicionesSubarbol(hijo, ids, posiciones);
         }
 
@@ -333,12 +359,7 @@ public class MotorDeliberacion {
         posiciones.addLast(nodo);
     }
 
-
-
-
-
-
-    //limpia todo el debate, dejando la estructura vacía.   
+    // limpia todo el debate, dejando la estructura vacía.
     public void clearDebate() {
         this.arbol = new Arbol<Opinion>();
         this.diccNodos = new DiccionarioHashAbierto<String, Position<Opinion>>();
@@ -348,7 +369,8 @@ public class MotorDeliberacion {
         this.ultimaOperacionFueEliminacion = false;
     }
 
-    //consultar por usuario, devuelve una lista de argumentos que pertenecen a ese usuario.
+    // consultar por usuario, devuelve una lista de argumentos que pertenecen a ese
+    // usuario.
     public PositionList<Opinion> consultarArgumentosPorUsuario(String idUsuario) {
         if (idUsuario == null || idUsuario.trim().isEmpty()) {
             throw new IllegalArgumentException("El identificador de usuario no puede ser nulo ni vacío.");
@@ -362,29 +384,39 @@ public class MotorDeliberacion {
 
     /**
      * Calcula la polarización de todos los nodos del debate.
-     * La polarización se define como la cantidad de argumentos a favor y en contra que existen en el subárbol que tiene como raíz cada nodo.
+     * La polarización se define como la cantidad de argumentos a favor y en contra
+     * que existen en el subárbol que tiene como raíz cada nodo.
+     * 
      * @throws IllegalStateException si no hay un debate activo.
-     * @return Un diccionario cuya clave es el ID del nodo y el valor es un diccionario con la polarización: 
-     * "AFAVOR" y "ENCONTRA" y sus respectivos conteos.
+     * @return Un diccionario cuya clave es el ID del nodo y el valor es un
+     *         diccionario con la polarización:
+     *         "AFAVOR" y "ENCONTRA" y sus respectivos conteos.
      */
-    public DiccionarioHashAbierto<String,DiccionarioHashAbierto<String,Integer>> calcularPolarizacionDebate(){
-        //TODO
+    public DiccionarioHashAbierto<String, DiccionarioHashAbierto<String, Integer>> calcularPolarizacionDebate() {
+        // TODO
         return null;
     }
 
-     /**
-    * Calcula la polarización de un nodo específico en el árbol de debate.
-    * La polarización se define como la cantidad de argumentos a favor y en contra que existen en el subárbol que tiene como raíz el nodo especificado por idNodo.
-    * @throws IllegalStateException si no hay un debate activo. 
-    * @param idNodo : Identificador del nodo para el cual se desea calcular la polarización.
-    * @return Un DiccionarioHashAbierto<String,Integer> que contiene la polarización del nodo, con las claves "AFAVOR" y "ENCONTRA" y sus respectivos conteos.
-    */
-    public DiccionarioHashAbierto<String,Integer> calcularPolarizacionNodo(String idNodo){
-        //TODO
+    /**
+     * Calcula la polarización de un nodo específico en el árbol de debate.
+     * La polarización se define como la cantidad de argumentos a favor y en contra
+     * que existen en el subárbol que tiene como raíz el nodo especificado por
+     * idNodo.
+     * 
+     * @throws IllegalStateException si no hay un debate activo.
+     * @param idNodo : Identificador del nodo para el cual se desea calcular la
+     *               polarización.
+     * @return Un DiccionarioHashAbierto<String,Integer> que contiene la
+     *         polarización del nodo, con las claves "AFAVOR" y "ENCONTRA" y sus
+     *         respectivos conteos.
+     */
+    public DiccionarioHashAbierto<String, Integer> calcularPolarizacionNodo(String idNodo) {
+        // TODO
         return null;
     }
- /*** Mostrar árbol por consola ***/
- 
+
+    /*** Mostrar árbol por consola ***/
+
     /**
      * Imprime por consola, en modo texto, el contenido del árbol de debate,
      * con indentación jerárquica que muestra la estructura padre-hijo.
@@ -416,20 +448,19 @@ public class MotorDeliberacion {
             hijos.addLast(hijo);
         }
 
-
         for (Position<Opinion> hijo : arbol.children(nodo)) {
             boolean esUltimo = (hijo == hijos.last().element());
-            
+
             String conector = esUltimo ? "└── " : "├── ";
             System.out.println(prefijo + conector + formatearNodo(hijo.element()));
 
             String prefijoHijo = prefijo + (esUltimo ? "    " : "│   ");
             imprimirHijos(hijo, prefijoHijo);
-            
+
         }
     }
 
-/** Arma la línea de texto que representa a un Argumento en la impresión. */
+    /** Arma la línea de texto que representa a un Argumento en la impresión. */
     private String formatearNodo(Opinion a) {
         if (a == null) {
             return "(argumento nulo)";
