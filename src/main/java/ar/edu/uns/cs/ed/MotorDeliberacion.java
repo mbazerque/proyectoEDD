@@ -412,27 +412,95 @@ public class MotorDeliberacion {
      *         diccionario con la polarización:
      *         "AFAVOR" y "ENCONTRA" y sus respectivos conteos.
      */
-    public DiccionarioHashAbierto<String, DiccionarioHashAbierto<String, Integer>> calcularPolarizacionDebate() {
-        // TODO
-        return null;
+
+    public DiccionarioHashAbierto<String,DiccionarioHashAbierto<String,Integer>> calcularPolarizacionDebate(){
+        //TODO
+    	if(arbol==null || arbol.isEmpty()) {
+    		throw new IllegalStateException("No hay un debate activo ");
+    	}
+    	DiccionarioHashAbierto<String, DiccionarioHashAbierto<String, Integer>> diccDebate =
+                new DiccionarioHashAbierto<String, DiccionarioHashAbierto<String, Integer>>();
+    	RecorridoRecPolarizacion(arbol.root(), diccDebate);
+        return diccDebate;
+    }
+    private DiccionarioHashAbierto<String, Integer> RecorridoRecPolarizacion(Position<Opinion> nodo, DiccionarioHashAbierto<String, DiccionarioHashAbierto<String, Integer>> diccDebate){
+    	Opinion op = nodo.element();
+        int contFavor = 0;
+        int contContra = 0;
+        for (Position<Opinion> h : arbol.children(nodo)) {
+            DiccionarioHashAbierto<String, Integer> diccAux = RecorridoRecPolarizacion(h, diccDebate);
+            Entry<String, Integer> entradaAF = diccAux.find("AFAVOR");
+            if (entradaAF != null && entradaAF.getValue() != null) {
+              contFavor += entradaAF.getValue();
+              }
+            Entry<String, Integer> entradaEC = diccAux.find("ENCONTRA");
+            if (entradaEC != null && entradaEC.getValue() != null) {
+                contContra += entradaEC.getValue();
+            }
+          }
+        if (op != null && op.getPostura() != null) {
+            String postura = op.getPostura();
+            if (postura.equals("AFAVOR")) {
+                contFavor++;
+            } else if (postura.equals("ENCONTRA")) {
+                contContra++;
+            }
+        }
+        DiccionarioHashAbierto<String, Integer> DiccionarioNodos = new DiccionarioHashAbierto<String, Integer>();
+        DiccionarioNodos.insert("AFAVOR", contFavor);
+        DiccionarioNodos.insert("ENCONTRA", contContra);
+        if(op!=null) {
+        diccDebate.insert(op.getIdArgumento(), DiccionarioNodos);
+        }
+        return DiccionarioNodos;
     }
 
-    /**
-     * Calcula la polarización de un nodo específico en el árbol de debate.
-     * La polarización se define como la cantidad de argumentos a favor y en contra
-     * que existen en el subárbol que tiene como raíz el nodo especificado por
-     * idNodo.
-     * 
-     * @throws IllegalStateException si no hay un debate activo.
-     * @param idNodo : Identificador del nodo para el cual se desea calcular la
-     *               polarización.
-     * @return Un DiccionarioHashAbierto<String,Integer> que contiene la
-     *         polarización del nodo, con las claves "AFAVOR" y "ENCONTRA" y sus
-     *         respectivos conteos.
-     */
-    public DiccionarioHashAbierto<String, Integer> calcularPolarizacionNodo(String idNodo) {
-        // TODO
-        return null;
+     /**
+    * Calcula la polarización de un nodo específico en el árbol de debate.
+    * La polarización se define como la cantidad de argumentos a favor y en contra que existen en el subárbol que tiene como raíz el nodo especificado por idNodo.
+    * @throws IllegalStateException si no hay un debate activo. 
+    * @param idNodo : Identificador del nodo para el cual se desea calcular la polarización.
+    * @return Un DiccionarioHashAbierto<String,Integer> que contiene la polarización del nodo, con las claves "AFAVOR" y "ENCONTRA" y sus respectivos conteos.
+    */
+    public DiccionarioHashAbierto<String,Integer> calcularPolarizacionNodo(String idNodo){
+    	if (arbol == null || arbol.isEmpty()) {
+            throw new IllegalStateException("No hay un debate activo");
+    	}
+    	Entry<String, Position<Opinion>> entradaNodo = diccNodos.find(idNodo);
+    	if (entradaNodo == null){
+    		throw new IllegalArgumentException("El nodo no existe");
+    	}
+    	Position<Opinion> pos = entradaNodo.getValue();
+    	return RecorridoRecPolarizacion(pos);
+    }
+    private DiccionarioHashAbierto<String, Integer> RecorridoRecPolarizacion(Position<Opinion> nodo){
+    	Opinion op = nodo.element();
+        int contFavor = 0;
+        int contContra = 0;
+        for (Position<Opinion> h : arbol.children(nodo)) {
+            DiccionarioHashAbierto<String, Integer> diccAux = RecorridoRecPolarizacion(h);
+            Entry<String, Integer> entradaAF = diccAux.find("AFAVOR");
+            if (entradaAF != null && entradaAF.getValue() != null) {
+              contFavor += entradaAF.getValue();
+              }
+            Entry<String, Integer> entradaEC = diccAux.find("ENCONTRA");
+            if (entradaEC != null && entradaEC.getValue() != null) {
+                contContra += entradaEC.getValue();
+            }
+          }
+        if (op != null && op.getPostura() != null) {
+            String postura = op.getPostura();
+            if (postura.equals("AFAVOR")) {
+                contFavor++;
+            } else if (postura.equals("ENCONTRA")) {
+                contContra++;
+            }
+        }
+        DiccionarioHashAbierto<String, Integer> DiccionarioNodos = new DiccionarioHashAbierto<String, Integer>();
+        DiccionarioNodos.insert("AFAVOR", contFavor);
+        DiccionarioNodos.insert("ENCONTRA", contContra);
+        
+        return DiccionarioNodos;
     }
 
     /*** Mostrar árbol por consola ***/
