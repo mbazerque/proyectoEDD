@@ -13,7 +13,7 @@ import ar.edu.uns.cs.ed.tdas.tdalista.PositionList;
 import ar.edu.uns.cs.ed.tdas.tdapila.PilaConLista;
 import ar.edu.uns.cs.ed.tdas.tdapila.Stack;
 
-/* Clase que representa el motor de deliveración. */
+/* Clase que representa el motor de deliberación. */
 public class MotorDeliberacion {
     /**
      * Incluir los atributos necesarios para el desarrollo.
@@ -38,7 +38,8 @@ public class MotorDeliberacion {
     // Pila para registrar el historial de operaciones reversibles
     private Stack<Operaciones> pilaOperaciones;
 
-    // Historial de las operaciones realizadas en el debate actual (incluye eliminaciones y deshacer), para mostrar por consola.
+    // Historial de las operaciones realizadas en el debate actual (incluye
+    // eliminaciones y deshacer), para mostrar por consola.
     private PositionList<String> historial;
 
     // Bandera para registrar si la última operación realizada fue una eliminación
@@ -116,7 +117,6 @@ public class MotorDeliberacion {
         pilaOperaciones.pop();
         historial.addLast("DESHACER -> " + op.getDetalle());
 
-
         if (op.getOperacion() == 1) {
             this.arbol = new Arbol<Opinion>();
             this.diccNodos = new DiccionarioHashAbierto<String, Position<Opinion>>();
@@ -150,14 +150,13 @@ public class MotorDeliberacion {
                     }
 
                     diccPosUsuarios.remove(entradaPosU);
-                    }
+                }
             }
             return op.getDetalle();
         }
 
         return op.getDetalle();
 
-        
     }
 
     /**
@@ -169,7 +168,7 @@ public class MotorDeliberacion {
      * @param nombreUsuario: Nombre del usuario.
      * 
      *                       El método valida que los parámetros no sean nulos o
-     *                       vacíos, y que el identificador de la raíz sea numérico.
+     *                       vacíos.
      *                       Si el árbol ya tiene un debate, lanza una excepción.
      *                       El método registra la operación en la pila de
      *                       operaciones para permitir deshacerla posteriormente.
@@ -286,7 +285,6 @@ public class MotorDeliberacion {
             throw new IllegalArgumentException("Posición del padre inválida: " + e.getMessage());
         }
 
-        
     }
 
     /**
@@ -324,10 +322,10 @@ public class MotorDeliberacion {
         Position<Opinion> nodo = entrada.getValue();
         String autor = nodo.element().getUsuario().getId();
 
-        if (!(idUsuario.trim().equals(autor))){
+        if (!(idUsuario.trim().equals(autor))) {
             throw new IllegalStateException(
                     "El usuario " + idUsuario.trim() + " no es autor del posteo " + idPosteo.trim());
-            }
+        }
         if (arbol.isRoot(nodo)) {
             clearDebate();
             historial.addLast("ELIMINAR_POSTEO:" + idPosteo.trim() + " (raíz, debate reiniciado)");
@@ -413,31 +411,31 @@ public class MotorDeliberacion {
      *         "AFAVOR" y "ENCONTRA" y sus respectivos conteos.
      */
 
-    public DiccionarioHashAbierto<String,DiccionarioHashAbierto<String,Integer>> calcularPolarizacionDebate(){
-        //TODO
-    	if(arbol==null || arbol.isEmpty()) {
-    		throw new IllegalStateException("No hay un debate activo ");
-    	}
-    	DiccionarioHashAbierto<String, DiccionarioHashAbierto<String, Integer>> diccDebate =
-                new DiccionarioHashAbierto<String, DiccionarioHashAbierto<String, Integer>>();
-    	RecorridoRecPolarizacion(arbol.root(), diccDebate);
+    public DiccionarioHashAbierto<String, DiccionarioHashAbierto<String, Integer>> calcularPolarizacionDebate() {
+        if (arbol == null || arbol.isEmpty()) {
+            throw new IllegalStateException("No hay un debate activo ");
+        }
+        DiccionarioHashAbierto<String, DiccionarioHashAbierto<String, Integer>> diccDebate = new DiccionarioHashAbierto<String, DiccionarioHashAbierto<String, Integer>>();
+        recorridoRecPolarizacion(arbol.root(), diccDebate);
         return diccDebate;
     }
-    private DiccionarioHashAbierto<String, Integer> RecorridoRecPolarizacion(Position<Opinion> nodo, DiccionarioHashAbierto<String, DiccionarioHashAbierto<String, Integer>> diccDebate){
-    	Opinion op = nodo.element();
+
+    private DiccionarioHashAbierto<String, Integer> recorridoRecPolarizacion(Position<Opinion> nodo,
+            DiccionarioHashAbierto<String, DiccionarioHashAbierto<String, Integer>> diccDebate) {
+        Opinion op = nodo.element();
         int contFavor = 0;
         int contContra = 0;
         for (Position<Opinion> h : arbol.children(nodo)) {
-            DiccionarioHashAbierto<String, Integer> diccAux = RecorridoRecPolarizacion(h, diccDebate);
+            DiccionarioHashAbierto<String, Integer> diccAux = recorridoRecPolarizacion(h, diccDebate);
             Entry<String, Integer> entradaAF = diccAux.find("AFAVOR");
             if (entradaAF != null && entradaAF.getValue() != null) {
-              contFavor += entradaAF.getValue();
-              }
+                contFavor += entradaAF.getValue();
+            }
             Entry<String, Integer> entradaEC = diccAux.find("ENCONTRA");
             if (entradaEC != null && entradaEC.getValue() != null) {
                 contContra += entradaEC.getValue();
             }
-          }
+        }
         if (op != null && op.getPostura() != null) {
             String postura = op.getPostura();
             if (postura.equals("AFAVOR")) {
@@ -446,65 +444,46 @@ public class MotorDeliberacion {
                 contContra++;
             }
         }
-        DiccionarioHashAbierto<String, Integer> DiccionarioNodos = new DiccionarioHashAbierto<String, Integer>();
-        DiccionarioNodos.insert("AFAVOR", contFavor);
-        DiccionarioNodos.insert("ENCONTRA", contContra);
-        if(op!=null) {
-        diccDebate.insert(op.getIdArgumento(), DiccionarioNodos);
+        DiccionarioHashAbierto<String, Integer> diccionarioNodos = new DiccionarioHashAbierto<String, Integer>();
+        diccionarioNodos.insert("AFAVOR", contFavor);
+        diccionarioNodos.insert("ENCONTRA", contContra);
+
+        if (diccDebate != null && op != null) {
+            diccDebate.insert(op.getIdArgumento(), diccionarioNodos);
         }
-        return DiccionarioNodos;
+
+        return diccionarioNodos;
     }
 
-     /**
-    * Calcula la polarización de un nodo específico en el árbol de debate.
-    * La polarización se define como la cantidad de argumentos a favor y en contra que existen en el subárbol que tiene como raíz el nodo especificado por idNodo.
-    * @throws IllegalStateException si no hay un debate activo. 
-    * @param idNodo : Identificador del nodo para el cual se desea calcular la polarización.
-    * @return Un DiccionarioHashAbierto<String,Integer> que contiene la polarización del nodo, con las claves "AFAVOR" y "ENCONTRA" y sus respectivos conteos.
-    */
-    public DiccionarioHashAbierto<String,Integer> calcularPolarizacionNodo(String idNodo){
-    	if (arbol == null || arbol.isEmpty()) {
-            throw new IllegalStateException("No hay un debate activo");
-    	}
-    	Entry<String, Position<Opinion>> entradaNodo = diccNodos.find(idNodo);
-    	if (entradaNodo == null){
-    		throw new IllegalArgumentException("El nodo no existe");
-    	}
-    	Position<Opinion> pos = entradaNodo.getValue();
-    	return RecorridoRecPolarizacion(pos);
-    }
-    private DiccionarioHashAbierto<String, Integer> RecorridoRecPolarizacion(Position<Opinion> nodo){
-    	Opinion op = nodo.element();
-        int contFavor = 0;
-        int contContra = 0;
-        for (Position<Opinion> h : arbol.children(nodo)) {
-            DiccionarioHashAbierto<String, Integer> diccAux = RecorridoRecPolarizacion(h);
-            Entry<String, Integer> entradaAF = diccAux.find("AFAVOR");
-            if (entradaAF != null && entradaAF.getValue() != null) {
-              contFavor += entradaAF.getValue();
-              }
-            Entry<String, Integer> entradaEC = diccAux.find("ENCONTRA");
-            if (entradaEC != null && entradaEC.getValue() != null) {
-                contContra += entradaEC.getValue();
-            }
-          }
-        if (op != null && op.getPostura() != null) {
-            String postura = op.getPostura();
-            if (postura.equals("AFAVOR")) {
-                contFavor++;
-            } else if (postura.equals("ENCONTRA")) {
-                contContra++;
-            }
+    /**
+     * Calcula la polarización de un nodo específico en el árbol de debate.
+     * La polarización se define como la cantidad de argumentos a favor y en contra
+     * que existen en el subárbol que tiene como raíz el nodo especificado por
+     * idNodo.
+     * 
+     * @throws IllegalStateException si no hay un debate activo.
+     * @param idNodo : Identificador del nodo para el cual se desea calcular la
+     *               polarización.
+     * @return Un DiccionarioHashAbierto<String,Integer> que contiene la
+     *         polarización del nodo, con las claves "AFAVOR" y "ENCONTRA" y sus
+     *         respectivos conteos.
+     */
+    public DiccionarioHashAbierto<String, Integer> calcularPolarizacionNodo(String idNodo) {
+        if (idNodo == null || idNodo.trim().isEmpty()) {
+            throw new IllegalArgumentException("El identificador del nodo no puede ser nulo ni vacío.");
         }
-        DiccionarioHashAbierto<String, Integer> DiccionarioNodos = new DiccionarioHashAbierto<String, Integer>();
-        DiccionarioNodos.insert("AFAVOR", contFavor);
-        DiccionarioNodos.insert("ENCONTRA", contContra);
-        
-        return DiccionarioNodos;
+        if (arbol == null || arbol.isEmpty()) {
+            throw new IllegalStateException("No hay un debate activo");
+        }
+        Entry<String, Position<Opinion>> entradaNodo = diccNodos.find(idNodo.trim());
+        if (entradaNodo == null) {
+            throw new IllegalArgumentException("El nodo no existe");
+        }
+        Position<Opinion> pos = entradaNodo.getValue();
+        return recorridoRecPolarizacion(pos, null);
     }
 
     /*** Mostrar árbol por consola ***/
-
     /**
      * Imprime por consola, en modo texto, el contenido del árbol de debate,
      * con indentación jerárquica que muestra la estructura padre-hijo.
@@ -526,7 +505,8 @@ public class MotorDeliberacion {
     }
 
     /**
-     * Muestra por consola el historial de operaciones realizadas en el debate actual,
+     * Muestra por consola el historial de operaciones realizadas en el debate
+     * actual,
      * en orden cronológico y numeradas.
      * Incluye creación del debate, posteos, eliminaciones y operaciones deshechas.
      * El historial se reinicia al crear un debate nuevo o al limpiar el debate.
